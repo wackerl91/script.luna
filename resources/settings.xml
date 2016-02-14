@@ -32,4 +32,8 @@
         <setting label="30028" type="file" id="api_key_file" visible="eq(-1,true)" enable="eq(-1,true)" default=""/>
         <setting label="30022" type="action" action="XBMC.RunPlugin(plugin://script.luna/actions/reset-cache)"/>
     </category>
+    <!-- This category is used for hidden settings that determine the addon state and aren't required for any other settings -->
+    <category label="hidden" visible="false">
+        <setting enable="false" visible="false" id="luna_first_launch" default="true" />
+    </category>
 </settings>
