@@ -7,6 +7,7 @@ from xbmcswift2 import xbmc, xbmcaddon
 
 from resources.lib.di.component import Component
 from resources.lib.di.requiredfeature import RequiredFeature
+from resources.lib.util.libgamestream import LibGameStream
 
 
 def loop_lines(dialog, iterator):
@@ -17,6 +18,12 @@ def loop_lines(dialog, iterator):
     for line in iterator:
         dialog.update(0, line)
 
+def pair_func(dialog, host):
+    gs = LibGameStream()
+    
+    if gs.connect_server(host):
+        if not gs.isPaired():
+            gs.pair("1234")
 
 class MoonlightHelper(Component):
     plugin = RequiredFeature('plugin')
@@ -69,14 +76,9 @@ class MoonlightHelper(Component):
         """
         :type dialog: DialogProgress
         """
-        self.logger.info('[MoonlightHelper] - Attempting to pair host: ' + self.plugin.get_setting('host', unicode))
-        pairing_proc = subprocess.Popen(
-                ['stdbuf', '-oL', self.config_helper.get_binary(), 'pair', self.plugin.get_setting('host', unicode)],
-                stdout=subprocess.PIPE)
-
-        lines_iterator = iter(pairing_proc.stdout.readline, b"")
-
-        pairing_thread = threading.Thread(target=loop_lines, args=(dialog, lines_iterator))
+        self.logger.info('[MoonlightHelper] - Attempting to pair host: ' + self.config_helper.get_host())
+        
+        pairing_thread = threading.Thread(target=pair_func, args=(dialog, self.config_helper.get_host()))
         pairing_thread.start()
 
         success = False
@@ -87,34 +89,21 @@ class MoonlightHelper(Component):
                 success = True
                 break
             if dialog.iscanceled():
-                pairing_proc.kill()
                 dialog.close()
                 success = False
                 break
-
+        
         if success:
             dialog.update(0, 'Checking if pairing has been successful.')
             xbmc.sleep(1000)
-            pairing_check = subprocess.Popen([self.config_helper.get_binary(), 'list', self.config_helper.get_host()],
-                                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-            last = ''
-
-            while True:
-                line = pairing_check.stdout.readline()
-                err = pairing_check.stderr.readline()
-                if line != '':
-                    last = line
-                if err != '':
-                    last = err
-                if not line and not err:
-                    break
-
+            
+            gs = LibGameStream()
+            gs.connect_server(self.config_helper.get_host())
+            
             dialog.close()
-            if last.lower().strip() != 'You must pair with the PC first'.lower().strip():
+            if gs.isPaired():
                 return True
         else:
-
             return False
 
     def launch_game(self, game_id):
@@ -131,17 +120,17 @@ class MoonlightHelper(Component):
         ])
 
     def list_games(self):
-        self.config_helper.configure()
+        gs = LibGameStream()
+        
+        if not gs.connect_server(self.config_helper.get_host()):
+            return []
+        
+        if not gs.isPaired():
+            return []
+        
         game_list = []
-        list_proc = subprocess.Popen([self.config_helper.get_binary(), 'list', self.config_helper.get_host()],
-                                     stdout=subprocess.PIPE)
 
-        while True:
-            line = list_proc.stdout.readline()
-            if not re.match(self.regex_moonlight, line) and not re.match(self.regex_connect, line):
-                if line[3:] != '':
-                    game_list.append(line[3:].strip())
-            if not line:
-                break
-
+        for id, name in gs.applist():
+            game_list.append(name)
+        
         return game_list
