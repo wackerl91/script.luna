@@ -9,13 +9,19 @@ from resources.lib.nvhttp.cryptoprovider.abstractcryptoprovider import AbstractC
 
 
 class AdvancedCryptoProvider(AbstractCryptoProvider):
-    def __init__(self, config_helper):
+    def __init__(self, host_context_service, config_helper):
+        super(AdvancedCryptoProvider, self).__init__(host_context_service)
         self.config_helper = config_helper
-        self.cert_file = self.get_cert_path()
-        self.key_file = self.get_key_path()
+        self.cert_file = ''
+        self.key_file = ''
         self.cert = None
         self.private_key = None
         self.pem_cert_bytes = None
+        self._init()
+
+    def _init(self):
+        self.cert_file = self.get_cert_path()
+        self.key_file = self.get_key_path()
 
     def load_file_to_bytes(self, cert_file):
         self.pem_cert_bytes = buffer(open(cert_file).read())
@@ -117,10 +123,13 @@ class AdvancedCryptoProvider(AbstractCryptoProvider):
         return self.pem_cert_bytes
 
     def get_cert_path(self):
-        return os.path.join(os.path.expanduser('~'), '.cache/moonlight/client.pem')
+        super(AdvancedCryptoProvider, self).get_cert_path()
+        return os.path.join(self.get_key_base_path(), self._current_host.uuid, 'client.pem')
 
     def get_key_path(self):
-        return os.path.join(os.path.expanduser('~'), '.cache/moonlight/key.pem')
+        super(AdvancedCryptoProvider, self).get_key_path()
+        return os.path.join(self.get_key_base_path(), self._current_host.uuid, 'key.pem')
 
     def get_key_dir(self):
-        return os.path.join(os.path.expanduser('~'), '.cache/moonlight')
+        super(AdvancedCryptoProvider, self).get_key_dir()
+        return os.path.join(self.get_key_base_path(), self._current_host.uuid)

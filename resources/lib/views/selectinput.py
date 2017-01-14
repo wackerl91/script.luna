@@ -7,7 +7,6 @@ import pyxbmct.addonwindow as pyxbmct
 import xbmcaddon
 import xbmcgui
 
-from resources.lib.di.requiredfeature import RequiredFeature
 from resources.lib.model.ctrlselectionwrapper import CtrlSelectionWrapper
 from resources.lib.model.inputdevice import InputDevice
 
@@ -42,21 +41,15 @@ def create_label():
 
 
 class SelectInput(pyxbmct.AddonDialogWindow):
-    def __init__(self, title=''):
-        print 'Init Called'
+    def __init__(self, controller, available_devices, input_devices, title=''):
         super(SelectInput, self).__init__(title)
-        self.plugin = RequiredFeature('plugin').request()
-        self.core = RequiredFeature('core').request()
-        self.device_wrapper = RequiredFeature('device-wrapper').request()
-        self.available_devices = self.device_wrapper.devices
+        self.controller = controller
+        self.available_devices = available_devices
         self.md5 = hashlib.md5()
-        self.input_storage = self.plugin.get_storage('input_storage')
-
-        for key, device in self.input_storage.iteritems():
-            print 'Devices during INIT: %s' % device.name
+        self.input_devices = input_devices
 
         background = None
-        if self.core.get_active_skin() == 'skin.osmc':
+        if self.controller.get_active_skin() == 'skin.osmc':
             media_path = '/usr/share/kodi/addons/skin.osmc/media'
             if os.path.exists(media_path):
                 background = os.path.join(media_path, 'dialogs/DialogBackground_old.png')
@@ -73,7 +66,7 @@ class SelectInput(pyxbmct.AddonDialogWindow):
         self.setGeometry(1280, 720, 12, 6, padding=60)
         self.place_add_ctrl_btn()
         self.setFocus(self.add_ctrl_btn)
-        self.connect(pyxbmct.ACTION_NAV_BACK, self.close_and_save)
+        self.connect(pyxbmct.ACTION_NAV_BACK, self.close)
         self.init_existing_controls()  # initalise controls / mappings read from .storage
 
     def place_add_ctrl_btn(self):
@@ -84,7 +77,7 @@ class SelectInput(pyxbmct.AddonDialogWindow):
 
     def add_ctrl(self, device=None):
         idx = len(self.controls)
-        print 'Adding controler with index %s' % idx
+
         control = CtrlSelectionWrapper()
         self.md5.update(str(time.time()))
         ctrl_id = self.md5.hexdigest()
@@ -148,7 +141,6 @@ class SelectInput(pyxbmct.AddonDialogWindow):
             control.input_select_btn.controlDown(self.add_ctrl_btn)
         previous_control = None
         for _ctrl_id, _control in self.controls.iteritems():
-            print 'Looping controls, current index: %s' % _control.idx
             if _control.idx == control.idx-1:
                 previous_control = _control
         if previous_control:
@@ -174,24 +166,26 @@ class SelectInput(pyxbmct.AddonDialogWindow):
         if controller == -1:
             return
         else:
-            print device_names[controller]
-            device = self.device_wrapper.find_device_by_name(device_names[controller])
+            device = self.controller.find_device_by_name(device_names[controller])
             control.device = device
             control.input_select_btn.setLabel(device.name)
             if device.is_kbd() or device.is_mouse() or device.is_none_device():
                 control.trigger_adv_mapping_btn.setEnabled(False)
             else:
                 control.trigger_adv_mapping_btn.setEnabled(True)
-            self.input_storage[control.idx] = device
+            self.add_input_device(control.idx, device)
 
     def remove_input(self, control, dry=False):
         self.removeControls(control.controls_as_list())
         del_key = None
-        for key, value in self.input_storage.iteritems():
+        for key, value in self.input_devices.iteritems():
             if value.name == control.device.name:
                 del_key = key
         if not dry:
-            del self.input_storage[del_key]
+            try:
+                self.remove_input_device(del_key)
+            except KeyError:
+                pass
             del self.controls[control.id]
             del control
             self.init_existing_controls()
@@ -202,7 +196,6 @@ class SelectInput(pyxbmct.AddonDialogWindow):
         control.set_internal_navigation()
         next_control = None
         for _ctrl_id, _control in self.controls.iteritems():
-            print 'Looping controls, current index: %s' % _control.idx
             if _control.idx == control.idx+1:
                 next_control = _control
         if next_control:
@@ -217,14 +210,13 @@ class SelectInput(pyxbmct.AddonDialogWindow):
         control.adv_off(self)
         control.set_internal_navigation()
         control.unset_mapping_file()
-        for key, device in self.input_storage.iteritems():
+        for key, device in self.input_devices.iteritems():
                 if device.name == control.device.name:
                     device.mapping = None
-                    print 'Found device and saved mapping'
+                    self.update_input_device(control.idx, device)
                     break
         next_control = None
         for _ctrl_id, _control in self.controls.iteritems():
-            print 'Looping controls, current index: %s' % _control.idx
             if _control.idx == control.idx+1:
                 next_control = _control
         if next_control:
@@ -240,50 +232,44 @@ class SelectInput(pyxbmct.AddonDialogWindow):
                                           os.path.expanduser('~'))
         if browser:
             control.set_mapping_file(browser)
-            for key, device in self.input_storage.iteritems():
-                print 'Iterating devices, current IS device: %s' % device.name
+            for key, device in self.input_devices.iteritems():
                 if device.name == control.device.name:
                     device.mapping = browser
-                    print 'Found device and saved mapping'
+                    self.update_input_device(control.idx, device)
                     break
 
     def create_mapping(self, control):
-        print 'Starting mapping'
-        map_name = xbmcgui.Dialog().input(self.core.string('enter_filename'))
+        map_name = xbmcgui.Dialog().input(self.controller.get_string('enter_filename'))
 
         progress_dialog = xbmcgui.DialogProgress()
         progress_dialog.create(
-            self.core.string('name'),
-            self.core.string('starting_mapping')
+            self.controller.get_string('name'),
+            self.controller.get_string('starting_mapping')
         )
 
         map_file = '%s/%s.map' % (os.path.expanduser('~'), map_name)
 
-        moonlight_helper = RequiredFeature('moonlight-helper').request()
-        success = moonlight_helper.create_ctrl_map_new(progress_dialog, map_file, control.device)
+        success = self.controller.create_ctrl_map_new(progress_dialog, map_file, control.device)
 
         if success:
             confirmed = xbmcgui.Dialog().yesno(
-                    self.core.string('name'),
-                    self.core.string('mapping_success'),
-                    self.core.string('set_mapping_active')
+                    self.controller.get_string('name'),
+                    self.controller.get_string('mapping_success'),
+                    self.controller.get_string('set_mapping_active')
             )
-
-            self.core.logger.info('Dialog Yes No Value: %s' % confirmed)
 
             if confirmed:
                 control.set_mapping_file(map_file)
-                for key, device in self.input_storage.iteritems():
-                    print 'Iterating devices, current IS device: %s' % device.name
+                for key, device in self.input_devices.iteritems():
                     if device.name == control.device.name:
                         device.mapping = map_file
-                        print 'Found device and saved mapping'
+                        self.update_input_device(control.idx, device)
                         break
 
         else:
             xbmcgui.Dialog().ok(
-                    self.core.string('name'),
-                    self.core.string('mapping_failure')
+                    self.controller.get_string('name'),
+                    self.controller.get_string('mapping_failure')
             )
 
     def init_existing_controls(self):
@@ -293,16 +279,14 @@ class SelectInput(pyxbmct.AddonDialogWindow):
             self.controls = {}
 
         del_keys = []
-        for key, device in self.input_storage.iteritems():
-            print 'Iterating saved input devices in INIT: %s' % device.name
-            if not self.device_wrapper.find_device_by_name(device.name):
-                print 'Could not find device by name: %s' % device.name
+        for key, device in self.input_devices.iteritems():
+            if not self.controller.find_device_by_name(device.name):
                 del_keys.append(key)
 
         for key in del_keys:
-            del self.input_storage[key]
+            self.remove_input(key)
 
-        for key, device in self.input_storage.iteritems():
+        for key, device in self.input_devices.iteritems():
             self.add_ctrl(device)
 
     def filter_input_devices(self):
@@ -313,8 +297,21 @@ class SelectInput(pyxbmct.AddonDialogWindow):
                 device_list.append(device)
         return device_list
 
-    def close_and_save(self):
-        self.input_storage.sync()
-        print self.input_storage.raw_dict()
-        print 'Save called, closing window ... '
-        self.close()
+    def add_input_device(self, ctrl_id, device):
+        self.controller.add_input_device(ctrl_id, device)
+        self.input_devices[ctrl_id] = device
+
+    def remove_input_device(self, ctrl_id):
+        self.controller.remove_input_device(ctrl_id)
+        del self.input_devices[ctrl_id]
+
+    def update_input_device(self, ctrl_id, device):
+        self.controller.update_input_device(ctrl_id, device)
+
+    def setAnimation(self, control):
+        control.setAnimations(
+            [
+                ('WindowOpen', 'effect=fade start=0 end=100 time=300',),
+                ('WindowClose', 'effect=fade start=100 end=0 time=300',)
+            ]
+        )

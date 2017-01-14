@@ -7,10 +7,9 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 class AbstractScraper:
     __metaclass__ = ABCMeta
 
-    def __init__(self, plugin, core):
-        self.plugin = plugin
+    def __init__(self, core):
         self.core = core
-        self.base_path = self.plugin.storage_path
+        self.base_path = self.core.storage_path
 
     @abstractproperty
     def name(self):
@@ -54,6 +53,8 @@ class AbstractScraper:
         if url != 'N/A':
             file_path = os.path.join(base_path, os.path.basename(url))
             if not os.path.exists(file_path):
+                if not os.path.exists(os.path.dirname(file_path)):
+                    os.makedirs(os.path.dirname(file_path))
                 with open(file_path, 'wb') as img:
                     curl = subprocess.Popen(['curl', '-XGET', url], stdout=subprocess.PIPE)
                     img.write(curl.stdout.read())

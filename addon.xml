@@ -1,17 +1,16 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="script.luna" name="Luna" version="0.6.3~alpha" provider-name="wackerl91">
+<addon id="script.luna" name="Luna" version="0.7.0~rc4" provider-name="wackerl91">
   <requires>
     <import addon="xbmc.python" version="2.20.0"/>
-    <import addon="script.module.xbmcswift2" version="2.4.0"/>
     <import addon="script.module.pyxbmct" version="1.1.4" />
     <import addon="script.module.dateutil" version="2.4.2"/>
     <import addon="script.module.yaml" version="3.11.0" />
     <import addon="script.module.requests" version="2.4.3" />
   </requires>
-  <extension point="xbmc.python.pluginsource" library="addon.py">
+  <extension point="xbmc.python.script" library="addon.py">
     <provides>executable</provides>
   </extension>
-  <extension point="xbmc.service" library="service.py" start="login"/>
+  <!--<extension point="xbmc.service" library="service.py" start="login"/>-->
   <extension point="xbmc.addon.metadata">
     <platform>all</platform>
     <language></language>

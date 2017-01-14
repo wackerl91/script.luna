@@ -1,33 +1,42 @@
+import os
 from abc import ABCMeta, abstractmethod
 
 
 class AbstractCryptoProvider(object):
     __metaclass__ = ABCMeta
 
+    def __init__(self, host_context_service):
+        self.host_context_service = host_context_service
+        self._current_host = None
+
     @abstractmethod
     def get_cert_path(self):
-        pass
+        self._current_host = self.host_context_service.get_current_context()
 
     @abstractmethod
     def get_key_path(self):
-        pass
+        self._current_host = self.host_context_service.get_current_context()
 
     @abstractmethod
     def get_key_dir(self):
-        pass
+        self._current_host = self.host_context_service.get_current_context()
 
     @abstractmethod
     def get_client_cert(self):
-        pass
+        self._current_host = self.host_context_service.get_current_context()
 
     @abstractmethod
     def get_client_private_key(self):
-        pass
+        self._current_host = self.host_context_service.get_current_context()
 
     @abstractmethod
     def get_pem_encoded_client_cert(self):
-        pass
+        self._current_host = self.host_context_service.get_current_context()
 
     @abstractmethod
     def extract_cert_signature(self, cert):
-        pass
+        self._current_host = self.host_context_service.get_current_context()
+
+    @staticmethod
+    def get_key_base_path():
+        return os.path.join(os.path.expanduser('~'), '.cache/moonlight')

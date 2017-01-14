@@ -3,9 +3,8 @@ import os
 import subprocess
 import threading
 
-from xbmcswift2 import xbmc, xbmcaddon
+import xbmc
 
-from resources.lib.di.requiredfeature import RequiredFeature
 from resources.lib.model.inputmap import InputMap
 from resources.lib.util.inputwrapper import InputWrapper
 from resources.lib.util.stoppableinputhandler import StoppableInputHandler
@@ -27,23 +26,23 @@ class MoonlightHelper:
     regex_certificate_gen = '(Generating certificate...done)'
     regex_connection_failed = '(Can\'t connect to server)'
 
-    def __init__(self, plugin, config_helper, logger):
-        self.plugin = plugin
+    def __init__(self, core, config_helper, host_context_service, request_service, logger):
+        self.core = core
         self.config_helper = config_helper
+        self.host_context_service = host_context_service
+        self.request_service = request_service
         self.logger = logger
-        self.internal_path = xbmcaddon.Addon().getAddonInfo('path')
+        self.internal_path = core.internal_path
 
     def create_ctrl_map(self, dialog, map_file):
         mapping_proc = subprocess.Popen(
-                ['stdbuf', '-oL', self.config_helper.get_binary(), 'map', map_file, '-input',
-                 self.plugin.get_setting('input_device', unicode)], stdout=subprocess.PIPE)
+            ['stdbuf', '-oL', self.config_helper.get_binary(), 'map', map_file, '-input',
+             self.core.get_setting('input_device', unicode)], stdout=subprocess.PIPE)
 
         lines_iterator = iter(mapping_proc.stdout.readline, b"")
 
         mapping_thread = threading.Thread(target=loop_lines, args=(dialog, lines_iterator))
         mapping_thread.start()
-
-        success = False
 
         # TODO: Make a method or function from this
         while True:
@@ -83,7 +82,7 @@ class MoonlightHelper:
 
         print 'num buttons: %s' % input_wrapper.num_buttons
         print 'num_axes: %s' % input_wrapper.num_axes
-        expected_input_number = input_wrapper.num_buttons + (input_wrapper.num_axes *2)
+        expected_input_number = input_wrapper.num_buttons + (input_wrapper.num_axes * 2)
 
         js = StoppableJSHandler(input_wrapper, input_map)
         it = StoppableInputHandler(input_queue, input_map, dialog, expected_input_number)
@@ -117,19 +116,26 @@ class MoonlightHelper:
 
             return False
 
-    def pair_host(self, dialog):
-        return RequiredFeature('connection-manager').request().pair(dialog)
-
     def launch_game(self, game_id):
         self.config_helper.configure()
+        host = self.host_context_service.get_current_context()
+
+        (pre_script, post_script) = self.core.prepare_init_scripts()
+
+        self.logger.info("Got script paths: %s and %s" % (pre_script, post_script))
+
         subprocess.call([
             self.internal_path + '/resources/lib/launchscripts/osmc/launch-helper-osmc.sh',
             self.internal_path + '/resources/lib/launchscripts/osmc/launch.sh',
             self.internal_path + '/resources/lib/launchscripts/osmc/moonlight-heartbeat.sh',
+            host.local_ip,
+            host.key_dir,
             game_id,
             self.config_helper.get_config_path(),
-            self.plugin.get_setting('enable_moonlight_debug', str)
+            self.core.get_setting('enable_moonlight_debug', str),
+            pre_script,
+            post_script
         ])
 
     def list_games(self):
-        return RequiredFeature('nvhttp').request().get_app_list()
+        return self.request_service.get_app_list()

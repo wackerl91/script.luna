@@ -14,8 +14,8 @@ from resources.lib.model.apiresponse import ApiResponse
 
 
 class IgdbScraper(AbstractScraper):
-    def __init__(self, plugin, core):
-        AbstractScraper.__init__(self, plugin, core)
+    def __init__(self, core):
+        AbstractScraper.__init__(self, core)
         self.api_url = 'https://www.igdb.com/api/v1/games/%s'
         self.api_img_url = 'https://res.cloudinary.com/igdb/image/upload/t_%s/%s.jpg'
         self.cover_cache = self._set_up_path(os.path.join(self.base_path, 'art/poster/'))
@@ -25,7 +25,7 @@ class IgdbScraper(AbstractScraper):
         return 'IGDB'
 
     def get_game_information(self, nvapp):
-        if self.plugin.get_setting('api_key_file', str) == "":
+        if self.core.get_setting('api_key_file', str) == "":
             return ApiResponse()
 
         request_name = nvapp.title.replace(" ", "+").replace(":", "")
@@ -38,7 +38,7 @@ class IgdbScraper(AbstractScraper):
         return [self.cover_cache, self.api_cache]
 
     def is_enabled(self):
-        return self.plugin.get_setting('enable_igdb', bool)
+        return self.core.get_setting('enable_igdb', bool)
 
     def _gather_information(self, nvapp, game):
         game_cover_path = self._set_up_path(os.path.join(self.cover_cache, nvapp.id))
@@ -48,7 +48,7 @@ class IgdbScraper(AbstractScraper):
 
         try:
             cp = ConfigParser.ConfigParser()
-            cp.read(self.plugin.get_setting('api_key_file', str))
+            cp.read(self.core.get_setting('api_key_file', str))
             igdb_api_key = cp.get('API', 'igdb')
         except:
             xbmcgui.Dialog().notification(
@@ -102,6 +102,8 @@ class IgdbScraper(AbstractScraper):
     def _get_json_data(self, url_opener, path, game, best_match_id):
         file_path = os.path.join(path, game+'_igdb.json')
         if not os.path.exists(file_path) and best_match_id is not None:
+            if not os.path.exists(os.path.dirname(file_path)):
+                os.makedirs(os.path.dirname(file_path))
             response = url_opener.open(self.api_url % best_match_id)
             if response.getcode() in [200, 304]:
                 json_response = json.load(response)

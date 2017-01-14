@@ -3,21 +3,22 @@ import subprocess
 import threading
 
 import xbmc
-from resources.lib.di.requiredfeature import RequiredFeature
+
 from resources.lib.nvhttp.pairingmanager.abstractpairingmanager import AbstractPairingManager
 
 
 class SimplePairingManager(AbstractPairingManager):
-    def __init__(self, crypto_provider):
+    def __init__(self, crypto_provider, config_helper, logger):
         self.crypto_provider = crypto_provider
-        self.config_helper = RequiredFeature('config-helper').request()
-        self.logger = RequiredFeature('logger').request()
+        self.config_helper = config_helper
+        self.logger = logger
 
-    def pair(self, nvhttp, server_info, dialog):
-        self.logger.info('[MoonlightHelper] - Attempting to pair host: ' + self.config_helper.host_ip)
+    def pair(self, request_service, server_info, dialog):
+        self.logger.info('Attempting to pair host: ' + request_service.host_ip)
         pairing_proc = subprocess.Popen(
-                ['stdbuf', '-oL', self.config_helper.get_binary(), 'pair', self.config_helper.host_ip],
-                stdout=subprocess.PIPE)
+            ['stdbuf', '-oL', self.config_helper.get_binary(), 'pair', request_service.host_ip,
+             '--keydir', self.crypto_provider.get_key_dir()],
+            stdout=subprocess.PIPE)
 
         lines_iterator = iter(pairing_proc.stdout.readline, b"")
 
@@ -29,8 +30,8 @@ class SimplePairingManager(AbstractPairingManager):
             if not pairing_thread.isAlive():
                 break
 
-        new_server_info = nvhttp.get_server_info()
-        if self.get_pair_state(nvhttp, new_server_info) == self.STATE_PAIRED:
+        new_server_info = request_service.get_server_info()
+        if self.get_pair_state(request_service, new_server_info) == self.STATE_PAIRED:
             return self.STATE_PAIRED
         else:
             return self.STATE_FAILED

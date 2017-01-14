@@ -12,8 +12,8 @@ from resources.lib.model.apiresponse import ApiResponse
 
 
 class OmdbScraper(AbstractScraper):
-    def __init__(self, plugin, core):
-        AbstractScraper.__init__(self, plugin, core)
+    def __init__(self, core):
+        AbstractScraper.__init__(self, core)
         self.api_url = 'http://www.omdbapi.com/?t=%s&plot=short&r=json&type=game'
         self.cover_cache = self._set_up_path(os.path.join(self.base_path, 'art/poster/'))
         self.api_cache = self._set_up_path(os.path.join(self.base_path, 'api_cache/'))
@@ -31,7 +31,7 @@ class OmdbScraper(AbstractScraper):
         return [self.cover_cache, self.api_cache]
 
     def is_enabled(self):
-        return self.plugin.get_setting('enable_omdb', bool)
+        return self.core.get_setting('enable_omdb', bool)
 
     def _gather_information(self, nvapp, game):
         game_cover_path = self._set_up_path(os.path.join(self.cover_cache, nvapp.id))
@@ -70,6 +70,8 @@ class OmdbScraper(AbstractScraper):
     def _get_json_data(self, path, game):
         file_path = os.path.join(path, game+'_omdb.json')
         if not os.path.exists(file_path):
+            if not os.path.exists(os.path.dirname(file_path)):
+                os.makedirs(os.path.dirname(file_path))
             json_response = json.load(urllib2.urlopen(self.api_url % game))
             with open(file_path, 'w') as response_file:
                 json.dump(json_response, response_file)

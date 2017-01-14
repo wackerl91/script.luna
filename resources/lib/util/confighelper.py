@@ -5,17 +5,16 @@ import os
 class ConfigHelper:
     conf = 'luna.conf'
 
-    def __init__(self, plugin, logger):
-        self.plugin = plugin
+    def __init__(self, core, logger):
+        self.core = core
         self.logger = logger
         self._reset()
-        self.full_path = ''.join([self.plugin.storage_path, self.conf])
+        self.full_path = ''.join([self.core.storage_path, self.conf])
         self.configure(False)
 
     def _reset(self):
         self.file_path = None
         self.binary_path = None
-        self.host_ip = None
         self.enable_custom_res = None
         self.resolution_width = None
         self.resolution_height = None
@@ -30,16 +29,17 @@ class ConfigHelper:
         self.enable_custom_input = None
         self.full_path = None
         self.audio_device = None
+        self.enable_surround_audio = None
 
-    def _configure(self, addon_path, binary_path=None, host_ip=None, enable_custom_res=False, resolution_width=None,
+    def _configure(self, addon_path, binary_path=None, enable_custom_res=False, resolution_width=None,
                    resolution_height=None, resolution=None,
                    framerate=None, graphics_optimizations=False, remote_optimizations=False, local_audio=False,
                    enable_custom_bitrate=False, bitrate=None, packetsize=None,
-                   enable_custom_input=False, override_default_resolution=False, audio_device=None):
+                   enable_custom_input=False, override_default_resolution=False, audio_device=None,
+                   enable_surround_audio=False):
 
         self.addon_path = addon_path
         self.binary_path = binary_path
-        self.host_ip = host_ip
         self.enable_custom_res = enable_custom_res
         self.resolution_width = resolution_width,
         self.resolution_height = resolution_height,
@@ -54,6 +54,7 @@ class ConfigHelper:
         self.enable_custom_input = enable_custom_input
         self.override_default_resolution = override_default_resolution
         self.audio_device = audio_device
+        self.enable_surround_audio = enable_surround_audio
 
         self.full_path = ''.join([self.addon_path, self.conf])
 
@@ -64,23 +65,23 @@ class ConfigHelper:
             raise ValueError('Moonlight binary could not be found.')
 
         settings = {
-            'addon_path':                   self.plugin.storage_path,
-            'binary_path':                  binary_path,
-            'host_ip':                      self.plugin.get_setting('host', unicode),
-            'enable_custom_res':            self.plugin.get_setting('enable_custom_res', bool),
-            'resolution_width':             self.plugin.get_setting('resolution_width', str),
-            'resolution_height':            self.plugin.get_setting('resolution_height', str),
-            'resolution':                   self.plugin.get_setting('resolution', str),
-            'framerate':                    self.plugin.get_setting('framerate', str),
-            'graphics_optimizations':       self.plugin.get_setting('graphic_optimizations', bool),
-            'remote_optimizations':         self.plugin.get_setting('remote_optimizations', bool),
-            'local_audio':                  self.plugin.get_setting('local_audio', bool),
-            'enable_custom_bitrate':        self.plugin.get_setting('enable_custom_bitrate', bool),
-            'bitrate':                      self.plugin.get_setting('bitrate', int),
-            'packetsize':                   self.plugin.get_setting('packetsize', int),
-            'enable_custom_input':          self.plugin.get_setting('enable_custom_input', bool),
-            'override_default_resolution':  self.plugin.get_setting('override_default_resolution', bool),
-            'audio_device':                 self.plugin.get_setting('audio_device', str)
+            'addon_path': self.core.storage_path,
+            'binary_path': binary_path,
+            'enable_custom_res': self.core.get_setting('enable_custom_res', bool),
+            'resolution_width': self.core.get_setting('resolution_width', str),
+            'resolution_height': self.core.get_setting('resolution_height', str),
+            'resolution': self.core.get_setting('resolution', str),
+            'framerate': self.core.get_setting('framerate', str),
+            'graphics_optimizations': self.core.get_setting('graphic_optimizations', bool),
+            'remote_optimizations': self.core.get_setting('remote_optimizations', bool),
+            'local_audio': self.core.get_setting('local_audio', bool),
+            'enable_custom_bitrate': self.core.get_setting('enable_custom_bitrate', bool),
+            'bitrate': self.core.get_setting('bitrate', int),
+            'packetsize': self.core.get_setting('packetsize', int),
+            'enable_custom_input': self.core.get_setting('enable_custom_input', bool),
+            'override_default_resolution': self.core.get_setting('override_default_resolution', bool),
+            'audio_device': self.core.get_setting('audio_device', str),
+            'enable_surround_audio': self.core.get_setting('enable_surround_audio', bool)
         }
         self._configure(**settings)
 
@@ -98,7 +99,6 @@ class ConfigHelper:
             config.add_section('General')
 
         config.set('General', 'binpath', self.binary_path)
-        config.set('General', 'address', self.host_ip)
 
         if not self.override_default_resolution:
             if config.has_option('General', 'height'):
@@ -132,6 +132,7 @@ class ConfigHelper:
         config.set('General', 'sops', self.graphics_optimizations)
         config.set('General', 'remote', self.remote_optimizations)
         config.set('General', 'localaudio', self.local_audio)
+        config.set('General', 'surround', self.enable_surround_audio)
 
         if self.audio_device == 'sysdefault':
             if config.has_option('General', 'audio'):
@@ -151,7 +152,7 @@ class ConfigHelper:
                 print 'Removed section %s' % section
 
         if self.enable_custom_input:
-            input_storage = self.plugin.get_storage('input_storage')
+            input_storage = self.core.get_storage('input_storage')
             print input_storage.raw_dict()
             unmapped_devices = []
             mapped_devices = []
@@ -186,14 +187,14 @@ class ConfigHelper:
             cp.read(self.full_path)
 
             self.logger.info(
-                    '[ConfigHelper] - Successfully loaded config file > trying to access binary path now')
+                '[ConfigHelper] - Successfully loaded config file > trying to access binary path now')
 
             return self._config_map('General', cp)['binpath']
 
         except:
             self.logger.info(
-                    '[ConfigHelper] - Exception occurred while attempting to read config from disk >' +
-                    ' looking for binary file and dumping config file again.')
+                '[ConfigHelper] - Exception occurred while attempting to read config from disk >' +
+                ' looking for binary file and dumping config file again.')
 
             binary_path = self._find_binary()
             self.configure(False)

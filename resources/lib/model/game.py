@@ -6,9 +6,9 @@ from resources.lib.model.fanart import Fanart
 
 
 class Game:
-    version = 20160424
+    version = 20161201
 
-    def __init__(self, name, year=None, genre=None, plot=None, posters=None, fanarts=None):
+    def __init__(self, name, host_uuid, id=None, year=None, genre=None, plot=None, posters=None, fanarts=None):
         if genre is None:
             genre = []
         if posters is None:
@@ -17,6 +17,8 @@ class Game:
             fanarts = {}
 
         self.name = name
+        self.host_uuid = host_uuid
+        self.id = id
         self.year = year
         self.genre = genre
         self.plot = plot
@@ -33,6 +35,8 @@ class Game:
         """
         game = cls(
             api_response.name,
+            None,
+            None,
             api_response.year,
             api_response.genre,
             api_response.plot,
@@ -40,12 +44,20 @@ class Game:
             api_response.fanarts
         )
 
+        if game.genre == [None]:
+            game.genre = []
         return game
 
     def merge(self, other):
         """
         :type other: Game
         """
+        if self.host_uuid is None:
+            self.host_uuid = other.host_uuid
+
+        if self.id is None:
+            self.id = other.id
+
         if self.year is None:
             self.year = other.year
 
@@ -90,11 +102,11 @@ class Game:
     def get_selected_fanart(self):
         if hasattr(self, 'selected_fanart'):
             if self.selected_fanart.get_thumb() == '':
-                self.selected_fanart = self.get_fanart('')
+                self.selected_fanart = self.get_fanart('common/mesh.png')
 
             return self.selected_fanart
         else:
-            self.selected_fanart = self.get_fanart('')
+            self.selected_fanart = self.get_fanart('common/mesh.png')
             return self.selected_fanart
 
     def set_selected_fanart(self, uri):

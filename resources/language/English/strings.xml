@@ -26,7 +26,6 @@
     <string id="30021">Scraper</string>
     <string id="30022">Clear Game Cache</string>
     <string id="30023">Override Default Resolution</string>
-    <string id="30024">Disable Experimental Scraper Feature</string>
     <string id="30025">Enable OMDB as Game Information Provider</string>
     <string id="30026">Enable TheGamesDB as Game Information Provider</string>
     <string id="30027">Enable IGDB as Game Information Provider</string>
@@ -38,9 +37,14 @@
     <string id="30033">Force Enable Fanart (Movies and Luna)</string>
     <string id="30034">Select Input Device(s)</string>
     <string id="30035">Enable Pre-Release Updates</string>
-    <string id="30036">Selected Device</string>
+    <string id="30036">Selected Audio Device</string>
     <string id="30037">Select Audio Device</string>
     <string id="30038">Enable Moonlight Debug Output</string>
+    <string id="30039">Enable Surround Sound</string>
+    <string id="30040">Init Scripts</string>
+    <string id="30041">Enable pre / post scripts</string>
+    <string id="30042">Pre Script</string>
+    <string id="30043">Post Script</string>
     <!-- Context Menu -->
     <string id="30100">Addon Settings</string>
     <string id="30101">Full Refresh</string>
