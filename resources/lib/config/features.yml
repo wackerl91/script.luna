@@ -107,6 +107,7 @@ services:
         module: resources.lib.nvhttp.request.requestservice
         class_name: RequestService
         arguments:
+          - '@core'
           - '@crypto-provider'
           - '@config-helper'
           - '@host-context-service'
@@ -144,13 +145,13 @@ services:
         tags:
           - { name: logger, channel: scraper }
 
-    omdb-scraper:
-        module: resources.lib.scraper.omdbscraper
-        class_name: OmdbScraper
-        arguments:
-          - '@core'
-        tags:
-          - { name: scraper-chain }
+#    omdb-scraper:
+#        module: resources.lib.scraper.omdbscraper
+#        class_name: OmdbScraper
+#        arguments:
+#          - '@core'
+#        tags:
+#          - { name: scraper-chain }
 
     tgdb-scraper:
         module: resources.lib.scraper.tgdbscraper
@@ -160,13 +161,13 @@ services:
         tags:
           - { name: scraper-chain }
 
-    igdb-scraper:
-        module: resources.lib.scraper.igdbscraper
-        class_name: IgdbScraper
-        arguments:
-          - '@core'
-        tags:
-          - { name: scraper-chain }
+#    igdb-scraper:
+#        module: resources.lib.scraper.igdbscraper
+#        class_name: IgdbScraper
+#        arguments:
+#          - '@core'
+#        tags:
+#          - { name: scraper-chain }
 
     nvhttp-scraper:
         module: resources.lib.scraper.nvhttpscraper
@@ -249,6 +250,7 @@ services:
           - '@logger'
         tags:
           - { name: logger, channel: controller }
+          - { name: controller }
 
     host-controller:
         module: resources.lib.controller.hostcontroller
@@ -261,6 +263,7 @@ services:
           - '@host-context-service'
         tags:
           - { name: logger, channel: controller }
+          - { name: controller }
 
     game-list-controller:
         module: resources.lib.controller.gamelistcontroller
@@ -272,16 +275,21 @@ services:
           - '@logger'
         tags:
           - { name: logger, channel: controller }
+          - { name: controller }
 
     game-context-menu-controller:
         module: resources.lib.controller.gamecontextmenucontroller
         class_name: GameContextMenuController
+        tags:
+          - { name: controller }
 
     game-info-controller:
         module: resources.lib.controller.gameinfocontroller
         class_name: GameInfoController
         arguments:
           - '@core'
+        tags:
+          - { name: controller }
 
     audio-controller:
         module: resources.lib.controller.audiocontroller
@@ -290,6 +298,8 @@ services:
           - '@core'
           - '@audio-manager'
           - '@config-helper'
+        tags:
+          - { name: controller }
 
     host-controller:
         module: resources.lib.controller.hostcontroller
@@ -302,6 +312,7 @@ services:
           - '@host-context-service'
         tags:
           - { name: logger, channel: controller }
+          - { name: controller }
 
     controller-config-controller:
         module: resources.lib.controller.controllerconfigurationcontroller
@@ -311,6 +322,8 @@ services:
           - '@device-wrapper'
           - '@input-manager'
           - '@moonlight-helper'
+        tags:
+          - { name: controller }
 
     settings-controller:
         module: resources.lib.controller.settingscontroller
@@ -321,6 +334,7 @@ services:
           - '@logger'
         tags:
           - { name: logger, channel: controller }
+          - { name: controller }
 
     cache-controller:
         module: resources.lib.controller.cachecontroller
@@ -328,3 +342,35 @@ services:
         arguments:
           - '@core'
           - '@scraper-chain'
+        tags:
+          - { name: controller }
+
+    eos-helper:
+        module: resources.lib.eos.eoshelper
+        class_name: EosHelper
+        arguments:
+          - '@core'
+          - '@host-manager'
+          - '@game-manager'
+
+    #
+    # Loggers
+    #
+
+    default-logger:
+        module: resources.lib.core.logger.logger
+        class_name: Logger
+        arguments:
+          - 'debug'
+        tags:
+          - { name: logger-chain }
+
+    eos-logger:
+        module: resources.lib.core.logger.eoslogger
+        class_name: EosLogger
+        arguments:
+          - 'warning'
+        tags:
+          - { name: logger-chain }
+        calls:
+          - [ set_helper, ['@eos-helper'] ]

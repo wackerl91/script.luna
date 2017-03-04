@@ -24,8 +24,10 @@ class NvHTTPScraper(AbstractScraper):
         response = ApiResponse()
         response.name = nvapp.title
         raw_box_art = self.request_service.get_box_art(nvapp.id)
-        cover_path = self._dump_image_from_data(game_cover_path, nvapp.id, raw_box_art)
-        response.posters.append(cover_path)
+
+        if raw_box_art:
+            cover_path = self._dump_image_from_data(game_cover_path, nvapp.id, raw_box_art)
+            response.posters.append(cover_path)
 
         return response
 

@@ -1,3 +1,4 @@
+import json
 import os
 import random
 import uuid
@@ -13,8 +14,9 @@ from resources.lib.nvhttp.request.abstractrequestservice import AbstractRequestS
 
 
 class RequestService(AbstractRequestService):
-    def __init__(self, crypto_provider, config_helper, host_context_service, logger):
+    def __init__(self, core, crypto_provider, config_helper, host_context_service, logger):
         super(RequestService, self).__init__(logger)
+        self.core = core
         self.crypto_provider = crypto_provider
         self.config_helper = config_helper
         self.host_context_service = host_context_service
@@ -65,6 +67,7 @@ class RequestService(AbstractRequestService):
         host.pair_state = int(self.get_xml_string(server_info, 'PairStatus'))
         host.gpu_type = self.get_xml_string(server_info, 'gputype')
         host.gamelist_id = self.get_xml_string(server_info, 'gamelistid')
+        host.server_version = self.get_server_version(server_info)
         host.key_dir = os.path.join(AbstractCryptoProvider.get_key_base_path(), host.uuid)
         host.state = HostDetails.STATE_ONLINE
 
@@ -77,6 +80,7 @@ class RequestService(AbstractRequestService):
             cert = self.crypto_provider.get_cert_path()
             key = self.crypto_provider.get_key_path()
 
+            self.logger.info(str(url))
             if not os.path.isfile(cert) or not os.path.isfile(key):
                 raise IOError
 
@@ -168,9 +172,12 @@ class RequestService(AbstractRequestService):
                                                                                      self.build_uid_uuid_string(),
                                                                                      str(app_id), str(asset_type),
                                                                                      str(asset_idx)),
-            True)
+            True, content_only=False)
 
-        return response
+        if response.status_code == 404:
+            return False
+        else:
+            return response.content
 
 #    def unpair(self):
 #        self.open_http_connection(self.base_url_https + '/unpair?' + self.build_uid_uuid_string(), True)
