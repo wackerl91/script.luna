@@ -2,6 +2,8 @@
 
 POST_SCRIPT=$1
 
+killall -STOP kodi.bin
+
 sleep 10
 
 while [ true ]; do
@@ -11,7 +13,7 @@ while [ true ]; do
                 ${POST_SCRIPT}
             fi
 
-            sudo su -c "systemctl restart mediacenter &" &
+            killall -CONT kodi.bin
             exit
         else
             sleep 2

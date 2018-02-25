@@ -12,7 +12,7 @@ foo() { while IFS='' read -r line; do echo "$(date) [INFO] $line" >> ${LOG_PATH}
 foo_err() { while IFS='' read -r line; do echo "$(date) [ERROR] $line" >> ${LOG_PATH}; done; };
 
 if test "${DEBUG_ENABLED}" = "true"; then
-    moonlight stream ${HOST} -app "${GAME}" -config "${CONF_PATH}" -keydir "${KEY_DIR}" > >(foo) 2> >(foo_err)
+    moonlight stream ${HOST} -app "${GAME}" -config ${CONF_PATH} -keydir "${KEY_DIR}" > >(foo) 2> >(foo_err)
 else
-    moonlight stream ${HOST} -app "${GAME}" -config "${CONF_PATH}" -keydir "${KEY_DIR}"
+    moonlight stream ${HOST} -app "${GAME}" -config ${CONF_PATH} -keydir "${KEY_DIR}"
 fi
